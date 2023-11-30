@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace The_RPG_Game___Nadim
 {
@@ -13,7 +10,7 @@ namespace The_RPG_Game___Nadim
         static int playerX, playerY;
         static int enemyX, enemyY;
         static int playerHealth = 100;
-        static int enemyHealth = 50;
+        static int enemyHealth = 100;
 
         static void Main()
         {
@@ -36,6 +33,7 @@ namespace The_RPG_Game___Nadim
             ReadMapFromFile("Map.txt");
             FindStartingPositions();
 
+            
             for (int i = 0; i < map.GetLength(0); i++)
             {
                 for (int j = 0; j < map.GetLength(1); j++)
@@ -134,7 +132,8 @@ namespace The_RPG_Game___Nadim
             int newPlayerX = playerX + deltaX;
             int newPlayerY = playerY + deltaY;
 
-            if (map[newPlayerX, newPlayerY] != '#')
+            // Check for collisions
+            if (map[newPlayerX, newPlayerY] != '#' && map[newPlayerX, newPlayerY] != 'E')
             {
                 map[playerX, playerY] = ' ';
                 playerX = newPlayerX;
@@ -166,7 +165,8 @@ namespace The_RPG_Game___Nadim
                     break;
             }
 
-            if (map[newEnemyX, newEnemyY] != '#')
+            // Check for collisions
+            if (map[newEnemyX, newEnemyY] != '#' && map[newEnemyX, newEnemyY] != 'P')
             {
                 map[enemyX, enemyY] = ' ';
                 enemyX = newEnemyX;
@@ -178,13 +178,11 @@ namespace The_RPG_Game___Nadim
         static void CheckCollisions()
         {
             // Check if the player and enemy are on the same position
-            if (playerX == enemyX && playerY == enemyY)
+            if (playerX - enemyX <= 1 && playerY - enemyY <= 1)
             {
-                // Player attacks the enemy
+                // If the player and enemy are adjacent, they attack each other
                 enemyHealth -= 10;
-
-                // Enemy attacks the player
-                playerHealth -= 20;
+                playerHealth -= 10;
 
                 // Check for player and enemy death
                 if (playerHealth <= 0)
@@ -199,7 +197,11 @@ namespace The_RPG_Game___Nadim
                     Console.ReadLine();
                     Environment.Exit(0);
                 }
+
             }
+
         }
+
     }
+
 }

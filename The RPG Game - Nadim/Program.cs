@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 
-namespace The_RPG_Game___Nadim
+namespace The_RPG_Game
 {
     internal class Program
     {
@@ -21,6 +20,7 @@ namespace The_RPG_Game___Nadim
                 DisplayStats();
                 ProcessInput();
                 MoveEnemy();
+                MovePlayer(0, 0);
                 CheckCollisions();
             }
 
@@ -30,60 +30,126 @@ namespace The_RPG_Game___Nadim
 
         static void InitializeGame()
         {
-            ReadMapFromFile("Map.txt");
-            FindStartingPositions();
-
-            
-            for (int i = 0; i < map.GetLength(0); i++)
+            if (!ReadMapFromFile("Map.txt"))
             {
-                for (int j = 0; j < map.GetLength(1); j++)
-                {
-                    if (i == 0 || j == 0 || i == map.GetLength(0) - 1 || j == map.GetLength(1) - 1)
-                    {
-                        map[i, j] = '#';
-                    }
-                }
+                GenerateMap(20, 20);
             }
 
-            // Place the player and enemy on the map
+            FindStartingPositions();
+        }
+
+        static bool ReadMapFromFile(string fileName)
+        {
+            try
+            {
+                string[] lines = File.ReadAllLines(fileName);
+                int rows = lines.Length;
+                int cols = lines[0].Length;
+
+                map = new char[rows, cols];
+
+                for (int i = 0; i < rows; i++)
+                {
+                    for (int j = 0; j < cols; j++)
+                    {
+                        map[i, j] = ' ';
+                    }
+                }
+
+                for (int i = 0; i < rows; i++)
+                {
+                    map[i, 0] = '¤';
+                    map[i, cols - 1] = '¤';
+                }
+
+                for (int j = 0; j < cols; j++)
+                {
+                    map[0, j] = '¤';
+                    map[rows - 1, j] = '¤';
+                }
+
+                Random random = new Random();
+                for (int i = 0; i < rows * cols / 20; i++)
+                {
+                    int harmfulTileX, harmfulTileY;
+                    do
+                    {
+                        harmfulTileX = random.Next(1, rows - 1);
+                        harmfulTileY = random.Next(1, cols - 1);
+                    } while (map[harmfulTileX, harmfulTileY] != ' ');
+
+                    map[harmfulTileX, harmfulTileY] = 'H';
+                }
+
+                return true;
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine($"File {fileName} not found. Generating a default map.");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error reading map from file: {ex.Message}. Generating a default map.");
+                return false;
+            }
+        }
+
+        static void FindStartingPositions()
+        {
+            Random random = new Random();
+
+            do
+            {
+                playerX = random.Next(1, map.GetLength(0) - 1);
+                playerY = random.Next(1, map.GetLength(1) - 1);
+            } while (map[playerX, playerY] != ' ');
+
+            do
+            {
+                enemyX = random.Next(1, map.GetLength(0) - 1);
+                enemyY = random.Next(1, map.GetLength(1) - 1);
+            } while (map[enemyX, enemyY] != ' ');
+
             map[playerX, playerY] = 'P';
             map[enemyX, enemyY] = 'E';
         }
 
-        static void ReadMapFromFile(string fileName)
+        static void GenerateMap(int rows, int cols)
         {
-            string[] lines = File.ReadAllLines(fileName);
-            int rows = lines.Length;
-            int cols = lines[0].Length;
-
             map = new char[rows, cols];
 
             for (int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < cols; j++)
                 {
-                    map[i, j] = lines[i][j];
+                    map[i, j] = ' ';
                 }
             }
-        }
 
-        static void FindStartingPositions()
-        {
-            for (int i = 0; i < map.GetLength(0); i++)
+            for (int i = 0; i < rows; i++)
             {
-                for (int j = 0; j < map.GetLength(1); j++)
+                map[i, 0] = '¤';               
+                map[i, cols - 1] = '¤';        
+            }
+
+            for (int j = 0; j < cols; j++)
+            {
+                map[0, j] = '¤';               
+                map[rows - 1, j] = '¤';        
+            }
+
+            Random random = new Random();
+            for (int i = 0; i < rows * cols / 20; i++)
+            {
+                int harmfulTileX, harmfulTileY;
+                do
                 {
-                    if (map[i, j] == 'P')
-                    {
-                        playerX = i;
-                        playerY = j;
-                    }
-                    else if (map[i, j] == 'E')
-                    {
-                        enemyX = i;
-                        enemyY = j;
-                    }
-                }
+                    harmfulTileX = random.Next(1, rows - 1);
+                    harmfulTileY = random.Next(1, cols - 1);
+                } while (map[harmfulTileX, harmfulTileY] != ' ');
+
+                map[harmfulTileX, harmfulTileY] = 'H';
             }
         }
 
@@ -94,7 +160,37 @@ namespace The_RPG_Game___Nadim
             {
                 for (int j = 0; j < map.GetLength(1); j++)
                 {
-                    Console.Write(map[i, j] + " ");
+                    if (i == playerX && j == playerY)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.Write('P' + " ");
+                        Console.ResetColor();
+                    }
+                    else if (i == enemyX && j == enemyY)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.Write('E' + " ");
+                        Console.ResetColor();
+                    }
+                    else
+                    {
+                        if (map[i, j] == 'H')
+                        {
+                            Console.ForegroundColor = ConsoleColor.DarkRed;
+                            Console.Write('H' + " ");
+                            Console.ResetColor();
+                        }
+                        else if (map[i, j] == '¤')
+                        {
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.Write('¤' + " ");
+                            Console.ResetColor();
+                        }
+                        else
+                        {
+                            Console.Write(map[i, j] + " ");
+                        }
+                    }
                 }
                 Console.WriteLine();
             }
@@ -102,8 +198,10 @@ namespace The_RPG_Game___Nadim
 
         static void DisplayStats()
         {
+            Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine($"Player Health: {playerHealth}");
             Console.WriteLine($"Enemy Health: {enemyHealth}");
+            Console.ResetColor();
         }
 
         static void ProcessInput()
@@ -132,9 +230,14 @@ namespace The_RPG_Game___Nadim
             int newPlayerX = playerX + deltaX;
             int newPlayerY = playerY + deltaY;
 
-            // Check for collisions
-            if (map[newPlayerX, newPlayerY] != '#' && map[newPlayerX, newPlayerY] != 'E')
+            if (map[newPlayerX, newPlayerY] != '¤')
             {
+                if (map[newPlayerX, newPlayerY] == 'H')
+                {
+                    playerHealth -= 15;
+                    map[newPlayerX, newPlayerY] = ' ';
+                }
+
                 map[playerX, playerY] = ' ';
                 playerX = newPlayerX;
                 playerY = newPlayerY;
@@ -144,7 +247,7 @@ namespace The_RPG_Game___Nadim
 
         static void MoveEnemy()
         {
-            int direction = (new Random()).Next(4); // 0: Up, 1: Left, 2: Down, 3: Right
+            int direction = (new Random()).Next(4);
 
             int newEnemyX = enemyX;
             int newEnemyY = enemyY;
@@ -165,26 +268,33 @@ namespace The_RPG_Game___Nadim
                     break;
             }
 
-            // Check for collisions
-            if (map[newEnemyX, newEnemyY] != '#' && map[newEnemyX, newEnemyY] != 'P')
+            if (newEnemyX >= 1 && newEnemyX < map.GetLength(0) - 1 && newEnemyY >= 1 && newEnemyY < map.GetLength(1) - 1)
             {
-                map[enemyX, enemyY] = ' ';
-                enemyX = newEnemyX;
-                enemyY = newEnemyY;
-                map[enemyX, enemyY] = 'E';
+                if (map[newEnemyX, newEnemyY] != '¤')
+                {
+                    map[enemyX, enemyY] = ' ';
+                    enemyX = newEnemyX;
+                    enemyY = newEnemyY;
+                    map[enemyX, enemyY] = 'E';
+                }
+            }
+
+            if (playerX == enemyX && playerY == enemyY)
+            {
+                playerHealth -= 10;
             }
         }
 
         static void CheckCollisions()
         {
-            // Check if the player and enemy are on the same position
-            if (playerX - enemyX <= 1 && playerY - enemyY <= 1)
+            
+            if (playerX == enemyX && playerY == enemyY)
             {
-                // If the player and enemy are adjacent, they attack each other
-                enemyHealth -= 10;
-                playerHealth -= 10;
 
-                // Check for player and enemy death
+                
+                enemyHealth -= 20;
+
+                
                 if (playerHealth <= 0)
                 {
                     Console.WriteLine("Game Over. You were defeated!");
@@ -197,11 +307,25 @@ namespace The_RPG_Game___Nadim
                     Console.ReadLine();
                     Environment.Exit(0);
                 }
-
             }
+            else
+            {
+                
+                if (map[playerX, playerY] == 'H')
+                {
+                    
+                    playerHealth -= 15;
+                    map[playerX, playerY] = ' '; 
+                }
 
+                
+                if (playerHealth <= 0)
+                {
+                    Console.WriteLine("Game Over. You were defeated!");
+                    Console.ReadLine();
+                    Environment.Exit(0);
+                }
+            }
         }
-
     }
-
 }
